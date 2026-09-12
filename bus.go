@@ -251,6 +251,17 @@ func (b *Bus) Publish(env *Envelope, timeout *time.Duration) bool {
 	if timeout != nil {
 		deadline = time.Now().Add(*timeout)
 	}
+	return b.offerAndSchedule(ch, env, deadline)
+}
+
+// offerAndSchedule admits env to ch and, if admitted, schedules a drain.
+// The one place both Publish and the dead-letter hand-off enqueue work, so
+// there is exactly one scheduling path to reason about instead of two
+// differently-shaped ones - an independent production-readiness audit
+// flagged deadLetter's own offer-then-schedule call as a second,
+// separately-reasoned-about route that the lost-wakeup fix above (see
+// releaseBusPermit's comment) wasn't specifically verified against.
+func (b *Bus) offerAndSchedule(ch *channel, env *Envelope, deadline time.Time) bool {
 	if !ch.offer(env, deadline) {
 		return false
 	}
@@ -407,8 +418,7 @@ func (b *Bus) deadLetter(ch *channel, env *Envelope) {
 		dlqCh, ok := b.channels[dlqName]
 		b.channelsMu.RUnlock()
 		if ok {
-			dlqCh.offer(env, time.Now())
-			b.schedule(dlqCh)
+			b.offerAndSchedule(dlqCh, env, time.Now())
 		}
 	}
 	b.callbacksMu.Lock()
