@@ -295,7 +295,36 @@ func (b *Bus) tryAcquireBusPermit() bool {
 	}
 }
 
-func (b *Bus) releaseBusPermit() { <-b.busPermits }
+// releaseBusPermit frees the bus-wide permit and re-offers scheduling to
+// every channel that currently has pending work.
+//
+// Without this sweep there is a lost-wakeup race: schedule() gives up
+// silently when tryAcquireBusPermit fails, and the only thing that ever
+// retries a given channel is that same channel's own drain() finishing a
+// batch, or its own producer publishing again. If a channel's producer has
+// already finished and its last drain() goroutine lost the race for a bus
+// permit, nothing else in the system will ever revisit it - its remaining
+// backlog sits queued until Shutdown's timeout expires (observed directly:
+// seda-bus-compare's chan config, more channels contending for bus
+// permits than the bus has, failed to fully drain within 60s on repeated
+// runs). Sweeping every registered channel here is O(channels) per drain
+// completion - fine for the channel counts this bus is meant for - and
+// guarantees any channel with depth() > 0 gets a chance at a freed permit,
+// not just the channel that happened to release it.
+func (b *Bus) releaseBusPermit() {
+	<-b.busPermits
+	b.channelsMu.RLock()
+	channels := make([]*channel, 0, len(b.channels))
+	for _, ch := range b.channels {
+		channels = append(channels, ch)
+	}
+	b.channelsMu.RUnlock()
+	for _, ch := range channels {
+		if ch.depth() > 0 {
+			b.schedule(ch)
+		}
+	}
+}
 
 func (b *Bus) drain(ch *channel) {
 	for i := 0; i < batch; i++ {
