@@ -89,6 +89,27 @@ go run ./examples/pipeline
 
 Targets **Go 1.27.1**, matching `ra-common-go`'s `go.mod`.
 
+## Correctness suite coverage
+
+See [`seda-bus/CORRECTNESS_SUITE.md`](../CORRECTNESS_SUITE.md) for what
+C1–C7 mean. All in `bus_test.go` unless noted.
+
+| # | Property | Test(s) |
+|---|---|---|
+| C1 | Backpressure: Block | `TestBackpressureBlockWaitsInsteadOfRejecting` |
+| C1 | Backpressure: Reject | `TestBackpressureRejectsWhenTheQueueIsFull` |
+| C1 | Backpressure: DropNewest | `TestBackpressureDropNewestRejectsLikeReject` |
+| C1 | Backpressure: DropOldest | `TestBackpressureDropOldestEvictsInsteadOfRejecting` |
+| C2 | Retry then dead-letter | `TestNackRetriesThenDeadLetters` |
+| C2 | Succeeds on final attempt, attempt state cleared | `TestNackSucceedsOnFinalAttemptAndClearsAttemptState` |
+| C2 | No consumers dead-letters immediately | `TestChannelWithNoConsumersDeadLettersImmediately` |
+| C3 | Panicking consumer isolated | `TestPanickingConsumerDoesNotCrashTheBus` |
+| C4 | Shutdown accounting (drains before timeout) | `TestShutdownAccountsForInFlightWork` |
+| C4 | Shutdown accounting (timeout expires first) | `TestShutdownTimeoutStillAccountsCorrectly` |
+| C5 | Config validation | `TestChannelConfigClampsInvalidValuesToOne` — clamps to 1, does not fail fast |
+| C6 | No resource leak across lifecycles | `TestRepeatedBusLifecyclesDoNotLeakGoroutines` — goroutine count is this port's actual per-instance resource (no owned pool) |
+| C7 | Concurrency correctness | `TestConcurrentProducersDeliverExactlyOnce`, run with `-race` |
+
 ## What this is not
 
 SEDA's original design also included a **controller** that watched per-stage
