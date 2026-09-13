@@ -91,7 +91,7 @@ Targets **Go 1.27.1**, matching `ra-common-go`'s `go.mod`.
 
 ## Correctness suite coverage
 
-See [`seda-bus/CORRECTNESS_SUITE.md`](../CORRECTNESS_SUITE.md) for what
+See [`seda-bus-design/CORRECTNESS_SUITE.md`](../seda-bus-design/CORRECTNESS_SUITE.md) for what
 C1–C7 mean. All in `bus_test.go` unless noted.
 
 | # | Property | Test(s) |
@@ -116,7 +116,7 @@ SEDA's original design also included a **controller** that watched per-stage
 latency and queue depth at runtime and re-tuned resource allocation and shed
 load automatically. That adaptive controller is not implemented here — every
 setting is static configuration. See the shared
-[`seda-bus/DESIGN.md`](../DESIGN.md) §3 for what a `2.0` controller would need.
+[`seda-bus-design/DESIGN.md`](../seda-bus-design/DESIGN.md) §3 for what a `2.0` controller would need.
 
 ## Companion implementations
 
@@ -132,5 +132,5 @@ C++) nor a borrowed built-in one (Java, C#) — goroutines make the "shared
 worker pool" concept close to unnecessary. Envelope choice follows
 Python/TS/C++/C#.
 
-See [`seda-bus/DESIGN.md`](../DESIGN.md) for the shared design and a full
+See [`seda-bus-design/DESIGN.md`](../seda-bus-design/DESIGN.md) for the shared design and a full
 comparison table across all ports.
